@@ -3,8 +3,8 @@ from win32com.client import Dispatch
 from tkinter import Tk, filedialog
 
 
-prot = 'PCIE'               # PCIE, ETH, ...
-targetCol = 'Y'             # hardcode the column you want to compare to the dump file
+prot = 'ETH'               # PCIE, ETH, ...
+targetCol = 'AG'             # hardcode the column you want to compare to the dump file
 
 if prot == 'PCIE':
     cols = [targetCol, 'U', 'N', 'L', 'J']
@@ -18,7 +18,7 @@ else:
     print('Invalid protocol')
 
 
-regdumps = [['RXTX (vA2)', 'T5RATB0.' , 12, 6473],
+regdumps = [['RXTX (vA4)', 'T3CH0.' , 12, 6473],
             ]
 
 def col2n(col):
@@ -83,7 +83,7 @@ color_nofill = 0
 ##############  Main Loop
 ####################################################################
 
-root = Tk.Tk()
+root = Tk()
 root.withdraw()
 
 print ('Select dump file')
@@ -116,7 +116,11 @@ with open(dumpfilename, 'r') as dumpfile:
             if pf in line.lower():
                 lineitems = line.split('=')
                 symbol = ((lineitems[0].split('.')[1]).strip()).lower()
-                val = hex2int(((lineitems[1].split('#'))[0]).strip())
+                val = ((lineitems[1].split('#'))[0]).strip()
+                #print(val)
+                if '0x' in val:
+                    dumpType = 'hex'
+                    val = hex2int(val)
                 regval_dict[symbol] = val
                 break
 
@@ -130,25 +134,22 @@ for regdump in regdumps:
 
     row = first_r
     while row <= last_r:
-        print(row)
+        #print(row)
         try:
             symb = xlSht.Cells(row,symb_col).Value
             if (symb not in (None, 'None', ''))  and (symb.lower() != 'reserved'):
-                print ('Checking ', symb)
                 devval = regval_dict[symb]
-                print ('DUT %s = %d' % symb, devval)
-                xlSht.Cells(row, val_col).Value = '0x%x' % (devval)
+                xlSht.Cells(row, val_col).Value = hex(int(devval))
                 expVal = getExpVal(row)
                 if devval != expVal:
                     xlSht.Cells(row,val_col).Interior.ColorIndex = color_red            # Value seems wrong
         except:
             pass
         row += 1
-# change colors to only red if the value differs from expected
 
 # Save and close Excel spreadshseet
-#xlWb.Close(SaveChanges=True)
-#xlApp.Quit()
-#lApp.Visible = 0
-#del xlApp
+xlWb.Close(SaveChanges=True)
+xlApp.Quit()
+xlApp.Visible = 0
+del xlApp
 
