@@ -2,24 +2,21 @@ import win32gui, win32con
 from win32com.client import Dispatch
 from tkinter import Tk, filedialog
 
-
-prot = 'ETH'               # PCIE, ETH, ...
-targetCol = 'AG'             # hardcode the column you want to compare to the dump file
-
-if prot == 'PCIE':
-    cols = [targetCol, 'U', 'N', 'L', 'J']
-elif prot == 'ETH':
-    cols = [targetCol, 'AP', 'AG', 'AF', 'L', 'J']
-elif prot == 'JESD':
-    cols = [targetCol, 'BR', 'BE', 'BD', 'L', 'J']
-elif prot == 'CPRI':
-    cols = [targetCol, 'CI', 'CH', 'L', 'J']
-else:
-    print('Invalid protocol')
-
-
-regdumps = [['RXTX (vA4)', 'T3CH0.' , 12, 6473],
+# Hardcode Accordingly      
+regdumps = [['RXTX (vA4)', 'T5RATB0.' , 12, 7074, 'PCIE', 'Y'],
             ]
+
+def getCols(prot, targetCol):
+    if prot == 'PCIE':
+        return [targetCol, 'U', 'N', 'L', 'J']
+    elif prot == 'ETH':
+        return [targetCol, 'AP', 'AG', 'AF', 'L', 'J']
+    elif prot == 'JESD':
+        return [targetCol, 'BR', 'BE', 'BD', 'L', 'J']
+    elif prot == 'CPRI':
+        return [targetCol, 'CI', 'CH', 'L', 'J']
+    else:
+        print('Invalid protocol')
 
 def col2n(col):
     num = 0
@@ -34,8 +31,9 @@ def GetInt(value):
     except: pass
     return int(value)
 
-def getExpVal(row):
+def getExpVal(row, prot, targetCol):
     sbval = None
+    cols = getCols(prot, targetCol)
     for col in cols:
         coln = col2n(col)
         entry = xlSht.Cells(row, col).Value
@@ -116,7 +114,7 @@ with open(dumpfilename, 'r') as dumpfile:
             if pf in line.lower():
                 lineitems = line.split('=')
                 symbol = ((lineitems[0].split('.')[1]).strip()).lower()
-                val = ((lineitems[1].split('#'))[0]).strip()
+                val = (((lineitems[1].split('#'))[0]).strip())
                 #print(val)
                 if '0x' in val:
                     dumpType = 'hex'
@@ -129,6 +127,8 @@ for regdump in regdumps:
     prefix_ = regdump[1]
     first_r = regdump[2]
     last_r = regdump[3]
+    prot = regdump[4]
+    targetCol = regdump[5]
     
     xlSht = xlWb.Worksheets(ws)
 
@@ -139,9 +139,9 @@ for regdump in regdumps:
             symb = xlSht.Cells(row,symb_col).Value
             if (symb not in (None, 'None', ''))  and (symb.lower() != 'reserved'):
                 devval = regval_dict[symb]
-                xlSht.Cells(row, val_col).Value = hex(int(devval))
-                expVal = getExpVal(row)
-                if devval != expVal:
+                xlSht.Cells(row, val_col).Value = str(hex(int(devval)))
+                expVal = str(getExpVal(row, prot, targetCol))
+                if str(int(devval)).strip() != str(expVal).strip():
                     xlSht.Cells(row,val_col).Interior.ColorIndex = color_red            # Value seems wrong
         except:
             pass
